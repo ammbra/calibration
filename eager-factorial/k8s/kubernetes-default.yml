@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+    prometheus.io/scheme: http
+  labels:
+    app.kubernetes.io/name: eager-factorial
+    app.kubernetes.io/version: "1.0"
+  name: eager-factorial
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8001
+    - name: metrics
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+  selector:
+    app.kubernetes.io/name: eager-factorial
+    app.kubernetes.io/version: "1.0"
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+    prometheus.io/scheme: http
+  labels:
+    app.kubernetes.io/version: "1.0"
+    app.kubernetes.io/name: eager-factorial
+  name: eager-factorial
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/version: "1.0"
+      app.kubernetes.io/name: eager-factorial
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+        prometheus.io/scheme: http
+      labels:
+        app.kubernetes.io/version: "1.0"
+        app.kubernetes.io/name: eager-factorial
+    spec:
+      initContainers:
+        - name: create-empty-file
+          image: alpine
+          command: [ "touch", "/tmp/gc.log" ]
+          volumeMounts:
+            - name: log-storage
+              mountPath: /tmp
+      containers:
+        - env:
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JDK_JAVA_OPTIONS
+              value: "-Xlog:gc*=debug:file=/tmp/gc.log"
+          image: ghcr.io/ammbra/eager-factorial:1.0
+          imagePullPolicy: Always
+          name: eager-factorial
+          ports:
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            - containerPort: 8001
+              name: http
+              protocol: TCP
+            - containerPort: 8443
+              name: https
+              protocol: TCP
+          volumeMounts:
+            - name: log-storage
+              mountPath: /tmp
+      volumes:
+        - name: log-storage
+          emptyDir: { }
