@@ -16,6 +16,8 @@ import java.util.Random;
 
 record EditorHttpServer(FileProcessor processedFile, Histogram requestHistogram) implements HttpHandler {
 
+	public static final String FILE_NAME = "file.txt";
+
 	public static void main(String[] args) throws Exception {
 		System.out.println("org.example.EditorHttpServer");
 
@@ -30,7 +32,7 @@ record EditorHttpServer(FileProcessor processedFile, Histogram requestHistogram)
 
 		int size = 1000;
 		byte[] data = new byte[size];
-		String fileName = "file.txt";
+		String fileName = FILE_NAME;
 		Random r = new Random();
 		r.nextBytes(data);
 		try (FileOutputStream fos = new FileOutputStream(fileName)){
@@ -74,6 +76,7 @@ record EditorHttpServer(FileProcessor processedFile, Histogram requestHistogram)
 		}
 		LocalDateTime end = LocalDateTime.now();
 		long elapsedTime = Duration.between(start, end).toMillis();
+		System.out.println(elapsedTime);
 		requestHistogram.labels(String.valueOf(statusCode)).observe(elapsedTime);
 	}
 }
